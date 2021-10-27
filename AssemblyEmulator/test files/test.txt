@@ -1,0 +1,26 @@
+global    _start
+
+section .text
+_start: 
+
+	mov r1, 1 		; system call for write
+	mov r2, message
+	mov r3, 12 		 ; length of message
+    	syscall                	 ; invoke operating system to do the write
+
+;get input from user
+	mov r1, 0		; system call for read
+	mov r2, input1		; we will store the user's input in the input variable
+	mov r3, 9 		; number of bytes the input message will be
+	syscall			; invoke os to read input
+
+;now we say we're going to print the edited text
+	mov r1, 1 		   		; sys call for write
+	
+        mov r2, message4          		; address of string to output
+        mov r3, 25                 		; number of bytes
+       	syscall                     		; invoke operating system to do the write
+
+section   .data
+message:  db    "Enter Text:", 10 ; note the newline at the end
+message4: db	"Here is your text edited", 10
