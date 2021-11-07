@@ -22,17 +22,19 @@ public class Project2 {
 	//global variables
 	static HashMap <String, Instruction> instructionMap; //contains the instructions of the code (.text section)
 	static HashMap <String, byte[]> dataMap; //used to convieniently address different parts of memory.
-	
-	static byte [][] registers = new byte[6][]; //each register can hold 8 bytes. (5 general purpose + 1 return address register)
+	static HashMap <String , Integer> varMap;
+	static byte [][] registers = new byte[6][]; //each register can hold 4 bytes. (5 general purpose + 1 return address register)
 	static ArrayList<byte []> variables; //created when .data section is parsed
 	static int ip = 0; 			//instruction pointer
 	static int flag = 0;
-	static Stack<Integer> stack = new Stack<Integer>();
-
+	//static Stack<Integer> stack = new Stack<Integer>();
+	static byte [] stack = new byte[2048];
 
 	public static void main(String [] args) {
+		varMap = new HashMap<String, Integer>();
+		
 		for(int i = 0; i < 6; i++)
-			registers[i] = new byte[8];
+			registers[i] = new byte[4];
 
 		//use a map for easy calling of the instructions
 		instructionMap = new HashMap<String, Instruction>();		
@@ -44,7 +46,7 @@ public class Project2 {
 
 		//test();
 
-		String dir = "C:\\Users\\suprm\\Desktop\\341 submit\\313\\test.txt";
+		String dir = "C:\\Users\\suprm\\git\\AssemblyEmulator\\AssemblyEmulator\\test files\\example3.txt";
 		File f = new File(dir);
 		
 		String [][] instructions = null;
@@ -55,7 +57,7 @@ public class Project2 {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+		System.out.println("\n--------------------\nrunning program\n--------------------\n");
 		runProgram(instructions, null, instructionMap);
 	}
 
@@ -151,10 +153,11 @@ public class Project2 {
 			}
 		}
 		instructions = condense(instructions);
-		System.out.println("-----------------");
+		System.out.println("printing instructions---------");
 		for(int i = 0; i < instructions.length; i++) {
 			System.out.println(Arrays.toString(instructions[i]));
 		}
+		System.out.println("done printing-----------------");
 		sc.close();
 
 		return instructions;
@@ -188,11 +191,11 @@ public class Project2 {
 				if(checkSection(lineArgs) != -1)
 					inVariables = false;
 			
-
+			
 
 			if(inVariables) {
 				//check if this line is valid
-				if(getInstructionCode(lineArgs[0]) != -1) {
+				//if(getInstructionCode(lineArgs[0]) != -1) {
 
 					//save only the first 4 args (label, size, text/data, possible extra newline at the end)
 					String [] first4Args = new String[1024];
@@ -204,9 +207,9 @@ public class Project2 {
 
 					//save this line's code
 					data[counter] = first4Args;
-					System.out.println(Arrays.toString(lineArgs));
+					//System.out.println(Arrays.toString(lineArgs));
 					counter++;
-				}
+			//	}
 				//output = output.concat(s + "\n");
 
 			}
@@ -214,10 +217,11 @@ public class Project2 {
 		
 		data = condense(data);
 		
-		System.out.println("-----------------");
+		System.out.println("printing data-----------------");
 		for(int i = 0; i < data.length; i++) {
 			System.out.println(Arrays.toString(data[i]));
 		}
+		System.out.println("done printing-----------------");
 		sc.close();
 		
 		storeData(data);
@@ -227,46 +231,85 @@ public class Project2 {
 	
 	public static void storeData(String [][] lines) {
 		variables = new ArrayList<byte []>();
-		
+		System.out.println("here");
 		for(int i = 0; i < lines.length; i++) {
+			System.out.println("here2");
+
 			String [] line = lines[i];
-			String name = line[0].substring(0, line[0].length() - 1); //use substring to cut off the ":"
-			String length = line[1];
-			//String data = line[2];
-			String data = "";
-			
-			boolean quotes = false;
-			for(int j = 2; j < 1024; j++) {
-				if(line[j] == null)
-					break;
-				if(line[j].startsWith("\"")) {
-					quotes = true;
+			if(!line[0].equals("resb")) {
+				String name = line[1]; //.substring(0, line[0].length() - 1); //use substring to cut off the ":"
+				String length = line[0].toLowerCase();
+				//String data = line[2];
+				String message = "";
+				int len = 0;
+				switch(length) {
+				case "db" : len = 1; break;
+				case "dw" : len = 2; break;
+				case "dd" : len = 4; break;
+				default: System.out.println("Unknown length error"); continue; 
 				}
-				if(quotes) {
-					data += line[j].replace('\"', ' ') + " ";
-					if(line[j].endsWith("\"")) {
-						quotes = false;
+				
+				boolean lenVar = false;
+				boolean quotes = false;
+				for(int j = 2; j < 1024; j++) {
+					if(line[j] == null)
+						break;
+					if(line[j].startsWith("\"")) {
+						quotes = true;
+					}else if(line[j].matches("[l][e][n][(][a-zA-Z0-9]*[)]")) {
+						lenVar = true;
 					}
+					
+					if(lenVar) {
+						byte [] var = new byte[len];
+						String nameOfVar = line[j].substring(4, line[j].length() - 1);
+						
+						int lengthOfString = variables.get(varMap.get(nameOfVar)).length;
+						ByteBuffer buffer = ByteBuffer.allocate(4); 
+						buffer.putInt(lengthOfString); 
+						var = buffer.array();
+						System.out.println("Getting length of " + nameOfVar + " = " + lengthOfString);
+						
+						variables.add(var);
+						//we will map variable names to arraylist indecies
+						varMap.put(name, variables.size() - 1);	
+						System.out.println(variables + " " + variables.size());
+						continue;
+					}
+					if(quotes) {
+						message += line[j].replace('\"', ' ') + " ";
+						if(line[j].endsWith("\"")) {
+							quotes = false;
+						}
+					}
+					if(!quotes && line[j].contains(";"))
+						break;
 				}
-				if(!quotes && line[j].contains(";"))
-					break;
+				message = message.trim();
+				
+				
+				
+				
+				//first, we need to convert the string length to an int
+//				switch(length) {
+//				case "
+//				}
+				
+				byte [] var = new byte[len];
+				var = message.getBytes();
+				
+				variables.add(var);
+				//we will map variable names to arraylist indecies
+				varMap.put(name, variables.size() - 1);		
+			}else {
+				String name = line[1]; //.substring(0, line[0].length() - 1); //use substring to cut off the ":"
+				int length = Integer.parseInt(line[2].toLowerCase());
+				byte [] var = new byte[length];
+				
+				variables.add(var);
+				//we will map variable names to arraylist indecies
+				varMap.put(name, variables.size() - 1);		
 			}
-			data = data.trim();
-			
-			
-			boolean hasNewLine = (line[3].equals("10") ? true : false);
-			
-			//first, we need to convert the string length to an int
-//			switch(length) {
-//			case "
-//			}
-			
-			byte [] var = new byte[64];
-			var = data.getBytes();
-			
-			variables.add(var);
-			
-			dataMap.put(name, variables.get(variables.size() - 1));
 		}
 	}
 	
@@ -314,9 +357,10 @@ public class Project2 {
 		if(line.length < 2)
 			return -1;
 		for(String s : line) s = s.toLowerCase();
-
-		String s = line[1];
-		if(line[0].equals("section")) {
+		
+		String s = line[1].toLowerCase();
+		System.out.println(s);
+		if(line[0].toLowerCase().equals("section")) {
 			switch(s) {
 			case ".text" : return 0;
 			case ".bss"  : return 1;
@@ -346,11 +390,11 @@ public class Project2 {
 
 
 	public static void copy(byte [] a, byte [] b){
-		byte [] c = new byte[b.length];
-		a = c;
-		//System.out.println("Source data: " + Arrays.toString(b));
+//		byte [] c = new byte[b.length];
+//		a = c;
+		System.out.println("Source data: " + Arrays.toString(a) + ", " + Arrays.toString(b));
 		for(int i = 0; i < b.length; i++) {
-			c[i] = b[i];
+			a[i] = b[i];
 		}
 		//fill the rest of the indicies with zero's
 		for(int i = b.length; i < a.length; i++) {
@@ -358,14 +402,15 @@ public class Project2 {
 		}
 		
 		
-		for(byte [] d : registers)
-			System.out.println(Arrays.toString(d));
-		for(byte [] d : variables)
-			System.out.println(Arrays.toString(d));
-		System.out.println(); 
+//		for(byte [] d : registers)
+//			System.out.println(Arrays.toString(d));
+//		for(byte [] d : variables)
+//			System.out.println(Arrays.toString(d));
+//		System.out.println(); 
 	}
 
 	public static byte[] getByteRepresentation(String var) {
+		System.out.println(var);
 		int integerValue = 0;
 		//if the var is a char
 		if(var.startsWith("'")) {
@@ -374,11 +419,18 @@ public class Project2 {
 			integerValue = Integer.parseInt(var);
 		}else if(dataMap.containsKey(var)){			
 			return dataMap.get(var);
-		}else {
-			System.out.println("WARNING! Variable not found?");
+		}else if(varMap.containsKey(var)){
+			integerValue = varMap.get(var);
+			
+		}else if(varMap.containsKey(var.substring(1, var.length() - 1))) { //in case the var is being dereferenced
+			integerValue = varMap.get(var.substring(1, var.length() - 1));
+			System.out.println("int value = " + integerValue); 
+		}
+		else {
+			System.out.println("WARNING! Variable not found? " + var);
 		}
 		
-		ByteBuffer buffer = ByteBuffer.allocate(8); 
+		ByteBuffer buffer = ByteBuffer.allocate(4); 
 		buffer.putInt(integerValue); 
 		return buffer.array();
 	}
@@ -397,39 +449,69 @@ public class Project2 {
 	static Instruction mov = (String [] params) -> {
 		byte [] param1 = getByteRepresentation(params[1]);
 		byte [] param2 = getByteRepresentation(params[2]);
+//		byte [] param1 = null;
+//		byte [] param2 = null;
 		
+		for(byte b : param1) {
+			System.out.print(b + " ");
+		}
+		System.out.println();
+		for(byte b : param2) {
+			System.out.print(b + " ");
+		}
+		
+		System.out.println();
 		//if we're changing param1 directly
 		if(!params[1].contains("[")) {
 
 			//if we're accessing param2 directly
 			if(!params[2].contains("[")) {
-				//copy(dataMap.get(params[1]), dataMap.get(params[2]));
+				//copy(dataMap.get(params[1]), dataMap.get(params[2]));				
 				copy(param1, param2);
-
-				//if we're accessing the data param2 points 2
+				for(byte b : param1) {
+					System.out.print(b + " ");
+				}
+				System.out.println();
+				for(byte b : param2) {
+					System.out.print(b + " ");
+				}
+				System.out.println();
+			//we're dereferencing param2
 			}else {
-
-
+				
+				byte [] deref2 = variables.get(getVal(param2) - 1);
+				System.out.println("deref of :" + getVal(param2));
+				for(byte b : deref2) {
+					System.out.print(b + " ");
+				}
+				System.out.println();
+				copy(param1, deref2);
+				printAll();
 			}
 			//if we're changing the data param1 points to
 		}else {
 
 		}
 	};
-
+	
+	public static int stoi(String s) {
+		return (dataMap.get(s) != null) ? new BigInteger(dataMap.get(s)).intValue() : Integer.parseInt(s);
+	}
+	
 	static Instruction add = (String [] params) -> {
-		int var1 = new BigInteger(dataMap.get(params[1])).intValue();
-		int var2 = new BigInteger(dataMap.get(params[2])).intValue(); 
+		int var1 = stoi(params[1]);
+		int var2 = stoi(params[2]);
 		int ans = var1 + var2;
-		byte [] result = ByteBuffer.allocate(8).putInt(ans).array();
+		byte [] result = ByteBuffer.allocate(4).putInt(ans).array();
 		dataMap.put(params[1], result);
 	};
 
 	static Instruction sub = (String [] params) -> {
-		int var1 = new BigInteger(dataMap.get(params[1])).intValue();
-		int var2 = new BigInteger(dataMap.get(params[2])).intValue(); 
+		System.out.println(params[1] + " " + params[2]);
+		int var1 = stoi(params[1]);
+		int var2 = stoi(params[2]);
 		int ans = var1 - var2;
-		byte [] result = ByteBuffer.allocate(8).putInt(ans).array();
+		byte [] result = ByteBuffer.allocate(4).putInt(ans).array();
 		dataMap.put(params[1], result);
 	};
 
@@ -450,13 +532,18 @@ public class Project2 {
 	};
 
 	static Instruction cmp = (String [] params) -> {
-		flag = Integer.parseInt(params[1]) - Integer.parseInt(params[2]);
+		System.out.println(params[1] + " " + params[2]);
+		int var1 = stoi(params[1]);
+		int var2 = stoi(params[2]);
+		
+		int ans = var1 - var2;
+		flag =  Integer.signum(ans);
 	};
 
 	static Instruction syscall = (String [] params) -> {
+		printAll();
 		int type = getVal(registers[0]);
 		int size = getVal(registers[2]);
-		
 		//read in
 		if(type == 0) {
 			Scanner sc = new Scanner(System.in);
@@ -467,8 +554,7 @@ public class Project2 {
 			
 		//print out
 		}else if(type == 1) {
-			String output = new String(registers[1]);
-			
+			String output = new String(variables.get(getVal(registers[1])));
 			for(int i = 0; i < Math.min(size, output.length()); i++) {
 				System.out.print(output.charAt(i));
 			}
@@ -478,6 +564,30 @@ public class Project2 {
 	
 	public static int getVal(byte [] b) {
 		return ByteBuffer.wrap(b).getInt();
+	}
+	
+	public static void printAll() {
+		System.out.println("registers:");
+		int i = 1;
+		for(byte [] d : registers) {
+			System.out.println(i + " : " + Arrays.toString(d));
+			i++;
+		}
+		i = 0;
+		
+		System.out.println("variables:" + varMap);
+		for(byte [] d : variables) {
+			
+			System.out.println(Arrays.toString(d) + " String representation: " + toString(d));
+		}
+		System.out.println(); 
+	}
+	public static String toString(byte [] d) {
+		String s = "";
+		for(byte b : d) {
+			s += (char)b;
+		}
+		return s;
 	}
 	
 }

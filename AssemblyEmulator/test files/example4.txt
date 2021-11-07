@@ -1,0 +1,22 @@
+Section .Func
+print:
+mov r1,1
+mov r2,[sp+0]
+mov r3,[sp+1]
+syscall
+ret
+
+Section .Text
+mov r1,message
+mov r2,[message_len]
+call print
+mov r1,message2
+mov r2,[message2_len]
+call print
+
+
+Section .Data
+DW message "Hello World\n"
+DD message_len len(message)
+DW message2 "Hello World 2\n"
+DD message2_len len(message2)

@@ -1,0 +1,9 @@
+Section .Text
+mov r1,1
+mov r2,message
+mov r3,[message_len]
+syscall
+
+Section .Data
+DW message "Hello World\n"
+DD message_len len(message)

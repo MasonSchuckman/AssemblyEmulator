@@ -1,0 +1,47 @@
+Section .Text
+mov r1,1
+mov r2,message
+mov r3,message_len
+syscall
+mov r1,0
+mov r2,num_1
+mov r3,2
+syscall
+mov r4,num_1
+sub r4,48
+startloop:
+cmp r4,0
+jeq Done
+mov r5,r4
+add r5,48
+mov r1,1
+mov r2,message1
+mov r3,message1_len
+syscall
+mov r1,1
+mov r2,r5
+mov r3,1
+syscall
+mov r1,1
+mov r2,message2
+mov r3,message2_len
+syscall
+sub r4,1
+jmp startloop
+Done:
+mov r1,1
+mov r2,message3
+mov r3,message3_len
+syscall
+
+
+Section .Data
+DW message "Input Number 1:\n"
+DD message_len len(message)
+resb num_1 2
+DW message1 "Output Number :"
+DD message1_len len(message1)
+DW message2 "\n"
+DD message2_len len(message2)
+DW message3 "Done Loop \n"
+DD message3_len len(message3)
