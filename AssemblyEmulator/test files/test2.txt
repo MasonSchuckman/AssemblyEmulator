@@ -20,12 +20,14 @@ mov r5,[num_2]
 sub r4,48
 sub r5,48
 add r4,r5
+add r4,48
+mov [num_3],r4
 mov r1,1
 mov r2,message2
 mov r3,[message2_len]
 syscall
 mov r1,1
-mov r2,r4
+mov r2,num_3
 mov r3,1
 syscall
 
@@ -37,5 +39,6 @@ DW message1 "Input Number 2:\n"
 DD message1_len len(message1)
 resb num_1 2
 resb num_2 2
+resb num_3 2
 DW message2 "Output Number :\n"
 DD message2_len len(message2)
