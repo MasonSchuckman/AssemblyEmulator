@@ -63,8 +63,12 @@ public class Project2 {
 		regMap = new HashMap<String, byte[]>();
 		setupRegMap(regMap);
 
-
-		String dir = "C:\\Users\\suprm\\git\\AssemblyEmulator\\AssemblyEmulator\\test files\\test1.txt";
+		//*******************************************************NOTE TO GRADER:************************************************************************
+		//Change this line to point to the test file. Sorry if you wanted it done some other way.
+		String dir = "C:\\...\\test1.txt";
+		
+		dir = "C:\\Users\\suprm\\git\\AssemblyEmulator\\AssemblyEmulator\\test files\\test3.txt"; //Personal testing
+		
 		File f = new File(dir);
 
 		String [][] instructions = null;
@@ -104,17 +108,7 @@ public class Project2 {
 		}
 	}
 
-	public static void test() {
-		registers[0][1] = 4;
-		registers[1][2] = 5;
-		String [] ins = {"mov", "r1", "r2"};
-		mov.execute(ins);
-
-		for(byte [] d : registers)
-			System.out.println(Arrays.toString(d));
-		System.out.println(); 
-	}
-
+	
 	public static void runProgram(String [][] instructions, byte [][] data, HashMap <String, Instruction> instructionMap) {
 		for(ip = 0; ip < instructions.length; ip++) {
 
@@ -625,11 +619,15 @@ public class Project2 {
 			System.out.println("WARNING! Variable not found? " + var);
 		}
 
+		return itob(integerValue);
+	}
+	
+	static byte [] itob(int i) {
 		ByteBuffer buffer = ByteBuffer.allocate(4); 
-		buffer.putInt(integerValue); 		
+		buffer.putInt(i); 		
 		return buffer.array();
 	}
-
+	
 	public static boolean checkIsNumber(String var) {
 		try {  
 			Integer.parseInt(var);  
@@ -726,9 +724,12 @@ public class Project2 {
 
 	//needs to save the current state of the registers, push the registers onto the stack, then jmp to the function
 	static Instruction call = (String [] params) -> {
-		pfip.push(fip);
+		registers[5] = itob(ip); //set the return adress register
 		
-		sp += 5;
+		pfip.push(fip); //add the current function instruction to stack so that we can return to it later
+		
+		
+		sp += 5; //this implementation of the stack means we'll never use indecies 0-4, but that doesn't really matter.
 		//push the registers onto the stack so that they can be used by the function		
 		for(int i = sp; i < 5 + sp; i++) {
 			stack[i] = registers[i - sp].clone();
